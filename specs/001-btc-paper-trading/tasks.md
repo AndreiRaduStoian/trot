@@ -36,9 +36,9 @@ verified at its checkpoint.
 user stories.
 
 - [X] T006 Add failing configuration tests in `tests/test_config.py` for BTC/EUR, daily candles, EUR 500 starting capital, 50% exposure cap, SMA 30, momentum 14, volatility window 20, annualization 365, 12% target volatility, EUR 25 minimum, 5-percentage-point rebalance threshold, and rejection of invalid/out-of-range values.
-- [ ] T007 Define shared typed records and enums in `src/trot/models.py` for Market Candle, Strategy Configuration, Decision, Portfolio State, simulated order/fill, Evaluation Run, and Performance Report; keep `signal` to `long`, `cash`, or `unavailable`, `action` to `buy`, `sell`, `hold`, or `abstain`, indicators nullable only when unavailable, and require a reason and validation outcome for no-action, rejection, or invalid data.
-- [ ] T008 Implement validated settings and research defaults in `src/trot/config.py`, including configurable fees, spread, slippage, minimum exchange notional, data/database paths, mode, exchange source, and paper-quote age; reject unsupported symbols/modes and never configure authenticated order submission.
-- [ ] T009 Create the synchronous CLI entry point and standard logging setup in `src/trot/main.py`; route errors to stderr, reserve stdout for command results, return non-zero status on operation failures, and expose no live command or real-order route.
+- [X] T007 Define shared typed records and enums in `src/trot/models.py` for Market Candle, Strategy Configuration, Decision, Portfolio State, simulated order/fill, Evaluation Run, and Performance Report; keep `signal` to `long`, `cash`, or `unavailable`, `action` to `buy`, `sell`, `hold`, or `abstain`, indicators nullable only when unavailable, and require a reason and validation outcome for no-action, rejection, or invalid data.
+- [X] T008 Implement validated settings and research defaults in `src/trot/config.py`, including configurable fees, spread, slippage, minimum exchange notional, data/database paths, mode, exchange source, and paper-quote age; reject unsupported symbols/modes and never configure authenticated order submission.
+- [X] T009 Create the synchronous CLI entry point and standard logging setup in `src/trot/main.py`; route errors to stderr, reserve stdout for command results, return non-zero status on operation failures, and expose no live command or real-order route.
 
 **Checkpoint**: Shared contracts and safe settings are ready; user-story work can start.
 
