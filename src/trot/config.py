@@ -50,7 +50,9 @@ class Settings(BaseSettings):
             return "BTC/EUR"
         if normalized == "1D":
             return "1d"
-        raise ValueError("Only BTC/EUR and daily 1d candles are supported in this release.")
+        raise ValueError(
+            "Only BTC/EUR and daily 1d candles are supported in this release."
+        )
 
     @field_validator("data_dir", "db_path")
     @classmethod
