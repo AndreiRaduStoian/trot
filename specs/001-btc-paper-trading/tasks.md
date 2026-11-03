@@ -22,11 +22,11 @@ verified at its checkpoint.
 
 **Purpose**: Align the package and tooling with the planned supported runtime.
 
-- [ ] T001 [P] Set `requires-python` to `>=3.12`, add PyArrow as a runtime dependency, place pytest and Ruff in a development dependency group, and set the `trot` console entry point to `trot.main:main` in `pyproject.toml`; regenerate `uv.lock` with Python 3.12.
-- [ ] T002 [P] Set the repository interpreter to Python 3.12 in `.python-version`.
-- [ ] T003 [P] Ignore local SQLite databases, downloaded market data, environment files, and generated runtime artifacts in `.gitignore`.
-- [ ] T004 [P] Add documented safe paper/backtest defaults and storage paths, with no credentials or real-trading settings, to `.env.example`.
-- [ ] T005 Add a CI workflow at `.github/workflows/tests.yml` that installs from `uv.lock` on Python 3.12 and runs Ruff checks and pytest without network credentials.
+- [X] T001 [P] Set `requires-python` to `>=3.12`, add PyArrow as a runtime dependency, place pytest and Ruff in a development dependency group, and set the `trot` console entry point to `trot.main:main` in `pyproject.toml`; regenerate `uv.lock` with Python 3.12.
+- [X] T002 [P] Set the repository interpreter to Python 3.12 in `.python-version`.
+- [X] T003 [P] Ignore local SQLite databases, downloaded market data, environment files, and generated runtime artifacts in `.gitignore`.
+- [X] T004 [P] Add documented safe paper/backtest defaults and storage paths, with no credentials or real-trading settings, to `.env.example`.
+- [X] T005 Add a CI workflow at `.github/workflows/tests.yml` that installs from `uv.lock` on Python 3.12 and runs Ruff checks and pytest without network credentials.
 
 ---
 
