@@ -1,16 +1,24 @@
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
 from trot.models import MarketCandle
 
 
 def utc_iso(value: str) -> datetime:
-    return datetime.fromisoformat(value.replace("Z", "+00:00")).astimezone(timezone.utc)
+    return datetime.fromisoformat(value).astimezone(UTC)
 
 
-def candle(ts: str, open_: float, high: float, low: float, close: float, volume: float = 1.0, source: str = "binance") -> MarketCandle:
+def candle(
+    ts: str,
+    open_: float,
+    high: float,
+    low: float,
+    close: float,
+    volume: float = 1.0,
+    source: str = "binance",
+) -> MarketCandle:
     return MarketCandle(
         symbol="BTC/EUR",
         interval="1d",
@@ -26,7 +34,38 @@ def candle(ts: str, open_: float, high: float, low: float, close: float, volume:
 
 def make_valid_series() -> list[MarketCandle]:
     start = utc_iso("2024-01-01T00:00:00Z")
-    prices = [100.0, 101.5, 103.0, 104.0, 105.5, 107.0, 108.7, 110.2, 111.8, 113.0, 114.5, 115.8, 117.2, 118.0, 119.1, 120.4, 121.0, 122.3, 123.0, 124.5, 126.0, 127.4, 128.2, 130.0, 131.5, 133.2, 134.0, 135.7, 136.9, 137.5]
+    prices = [
+        100.0,
+        101.5,
+        103.0,
+        104.0,
+        105.5,
+        107.0,
+        108.7,
+        110.2,
+        111.8,
+        113.0,
+        114.5,
+        115.8,
+        117.2,
+        118.0,
+        119.1,
+        120.4,
+        121.0,
+        122.3,
+        123.0,
+        124.5,
+        126.0,
+        127.4,
+        128.2,
+        130.0,
+        131.5,
+        133.2,
+        134.0,
+        135.7,
+        136.9,
+        137.5,
+    ]
     candles: list[MarketCandle] = []
     for idx, price in enumerate(prices):
         day = start + timedelta(days=idx)

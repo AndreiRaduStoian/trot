@@ -1,17 +1,19 @@
 from __future__ import annotations
 
-from types import SimpleNamespace
-
 from trot.exchange import fetch_ohlcv
 
 
 class FakeExchange:
     def __init__(self):
         self.calls = []
-        self.markets = {"BTC/EUR": {"active": True, "precision": {"price": 2, "amount": 6}}}
+        self.markets = {
+            "BTC/EUR": {"active": True, "precision": {"price": 2, "amount": 6}}
+        }
 
     def fetch_ohlcv(self, symbol, timeframe, since=None, limit=1000):
-        self.calls.append({"symbol": symbol, "timeframe": timeframe, "since": since, "limit": limit})
+        self.calls.append(
+            {"symbol": symbol, "timeframe": timeframe, "since": since, "limit": limit}
+        )
         return [[1704067200000, 100.0, 101.0, 99.0, 100.5, 1.0]]
 
     def has(self, key):
