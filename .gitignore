@@ -32,6 +32,15 @@ htmlcov/
 !.env.example
 !.env.template
 
+# Local market data and paper-trading state
+data/
+*.db
+*.db-*
+*.sqlite
+*.sqlite3
+*.sqlite3-*
+reports/
+
 # Local caches and logs
 .cache/
 *.log
