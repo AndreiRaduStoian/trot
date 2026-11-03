@@ -8,6 +8,7 @@ __pycache__/
 .hypothesis/
 .tox/
 .nox/
+src/trot/__init__.py
 
 # Virtual environments
 .venv/
