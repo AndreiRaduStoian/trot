@@ -1,5 +1,4 @@
 import pytest
-
 from pydantic import ValidationError
 
 from trot.config import Settings

@@ -30,15 +30,15 @@ class StrategyConfig:
     volatility_window: int = 20
     volatility_target: Decimal = Decimal("0.12")
     max_btc_allocation: Decimal = Decimal("0.5")
-    min_trade_eur: Decimal = Decimal("25")
+    min_trade_eur: Decimal = Decimal(25)
     rebalance_threshold: Decimal = Decimal("0.05")
 
 
 @dataclass(frozen=True)
 class PortfolioState:
-    cash_eur: Decimal = Decimal("0")
-    btc_balance: Decimal = Decimal("0")
-    total_equity_eur: Decimal = Decimal("0")
+    cash_eur: Decimal = Decimal(0)
+    btc_balance: Decimal = Decimal(0)
+    total_equity_eur: Decimal = Decimal(0)
 
 
 @dataclass(frozen=True)
