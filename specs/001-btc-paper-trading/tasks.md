@@ -67,12 +67,12 @@ limits without network access or order submission.
 
 ### Implementation for User Story 1
 
-- [ ] T017 [US1] Implement UTC OHLCV normalization, completeness and interval validation, gap/duplicate/price checks, Parquet read/write, Arrow metadata, and the provenance sidecar manifest in `src/trot/data.py`; do not interpolate or forward-fill.
-- [ ] T018 [US1] Implement public CCXT OHLCV retrieval in `src/trot/exchange.py` with enabled rate limiting, bounded UTC-millisecond pagination/retries, BTC/EUR and 1d capability checks, and explicit API failure results; expose no authenticated exchange methods.
-- [ ] T019 [US1] Implement pure indicator and long/cash signal functions in `src/trot/strategy.py`; calculate only on validated completed candles, include the current close in SMA(30), use the close 14 daily intervals earlier for momentum, and return explicit unavailable/no-action reasons.
-- [ ] T020 [US1] Implement pure realized-volatility and target-allocation functions in `src/trot/risk.py`; use the most recent 20 daily returns, sample standard deviation, `sqrt(365)`, configurable 12% target and 50% maximum, and no new exposure for insufficient/invalid/zero volatility.
-- [ ] T021 [US1] Implement Decimal order-intent sizing and simulated fill-price helpers in `src/trot/execution.py`; apply fee/spread/slippage assumptions, balance/cap checks at execution price, conservative quantity rounding, required-exit handling, and minimum-order residual reporting.
-- [ ] T022 [US1] Wire `trot data download` in `src/trot/main.py` to `src/trot/config.py`, `src/trot/exchange.py`, and `src/trot/data.py`; report source, date range, candle count, validation, and actionable failures.
+- [X] T017 [US1] Implement UTC OHLCV normalization, completeness and interval validation, gap/duplicate/price checks, Parquet read/write, Arrow metadata, and the provenance sidecar manifest in `src/trot/data.py`; do not interpolate or forward-fill.
+- [X] T018 [US1] Implement public CCXT OHLCV retrieval in `src/trot/exchange.py` with enabled rate limiting, bounded UTC-millisecond pagination/retries, BTC/EUR and 1d capability checks, and explicit API failure results; expose no authenticated exchange methods.
+- [X] T019 [US1] Implement pure indicator and long/cash signal functions in `src/trot/strategy.py`; calculate only on validated completed candles, include the current close in SMA(30), use the close 14 daily intervals earlier for momentum, and return explicit unavailable/no-action reasons.
+- [X] T020 [US1] Implement pure realized-volatility and target-allocation functions in `src/trot/risk.py`; use the most recent 20 daily returns, sample standard deviation, `sqrt(365)`, configurable 12% target and 50% maximum, and no new exposure for insufficient/invalid/zero volatility.
+- [X] T021 [US1] Implement Decimal order-intent sizing and simulated fill-price helpers in `src/trot/execution.py`; apply fee/spread/slippage assumptions, balance/cap checks at execution price, conservative quantity rounding, required-exit handling, and minimum-order residual reporting.
+- [X] T022 [US1] Wire `trot data download` in `src/trot/main.py` to `src/trot/config.py`, `src/trot/exchange.py`, and `src/trot/data.py`; report source, date range, candle count, validation, and actionable failures.
 
 **Checkpoint**: User Story 1 is independently testable with fixtures; no command or module
 can send real orders.

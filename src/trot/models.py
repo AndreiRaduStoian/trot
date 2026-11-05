@@ -32,6 +32,8 @@ class StrategyConfig:
     max_btc_allocation: Decimal = Decimal("0.5")
     min_trade_eur: Decimal = Decimal(25)
     rebalance_threshold: Decimal = Decimal("0.05")
+    annualization_days: int = 365
+    exchange_min_notional_eur: Decimal = Decimal(25)
 
 
 @dataclass(frozen=True)
@@ -44,6 +46,7 @@ class PortfolioState:
 @dataclass(frozen=True)
 class Decision:
     candle_timestamp: datetime | None = None
+    symbol: str | None = None
     signal: Signal = "unavailable"
     action: DecisionAction = "abstain"
     reason: str = ""
