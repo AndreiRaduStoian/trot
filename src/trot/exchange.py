@@ -43,7 +43,9 @@ def fetch_ohlcv(
     candles: list[list[Any]] = []
     since = start_ms
     while True:
-        batch = exchange.fetch_ohlcv(symbol=symbol, timeframe=timeframe, since=since, limit=limit)
+        batch = exchange.fetch_ohlcv(
+            symbol=symbol, timeframe=timeframe, since=since, limit=limit
+        )
         if not batch:
             break
 

@@ -61,7 +61,9 @@ def build_order_intent(
             gross_eur = max(Decimal(0), cash_eur - fee)
         btc_qty = gross_eur / btc_price
         if btc_qty <= 0:
-            return OrderIntent(action="abstain", reason="resulting BTC quantity is zero")
+            return OrderIntent(
+                action="abstain", reason="resulting BTC quantity is zero"
+            )
         return OrderIntent(
             action="buy",
             eur_amount=_q(gross_eur),

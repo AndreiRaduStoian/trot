@@ -71,7 +71,10 @@ def main(argv: list[str] | None = None) -> int:
         if end < start:
             print("invalid date range: end must be after start", file=sys.stderr)
             return 1
-        print("download workflow requires upstream market data integration", file=sys.stderr)
+        print(
+            "download workflow requires upstream market data integration",
+            file=sys.stderr,
+        )
         return 1
 
     if args.command == "data":
