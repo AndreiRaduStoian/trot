@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-from trot.strategy import evaluate_signal
-
 from trot.models import StrategyConfig
+from trot.strategy import evaluate_signal
 
 
 def test_strategy_uses_sma_and_positive_momentum(valid_candles):

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pytest
+
 from trot.data import validate_candle, validate_candle_series
 
 
