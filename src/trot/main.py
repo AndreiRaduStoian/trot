@@ -4,7 +4,7 @@ import argparse
 import logging
 import sys
 
-from .config import Settings
+from trot.config import Settings
 
 logger = logging.getLogger("trot")
 
