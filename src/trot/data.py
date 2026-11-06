@@ -1,9 +1,16 @@
 from __future__ import annotations
 
+import hashlib
+import json
 import math
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal, InvalidOperation
+from pathlib import Path
 from typing import Any
+
+import ccxt
+import pyarrow as pa
+import pyarrow.parquet as pq
 
 from .models import MarketCandle
 
@@ -114,7 +121,11 @@ def candle_to_epoch_ms(candle: MarketCandle | dict[str, Any]) -> int:
     return int(timestamp.timestamp() * 1000)
 
 
-def validate_candle_series(candles: list[MarketCandle | dict[str, Any]]) -> bool:
+def validate_candle_series(
+    candles: list[MarketCandle | dict[str, Any]],
+    as_of: datetime | None = None,
+    require_fresh: bool = False,
+) -> bool:
     if not candles:
         raise ValueError("candle series cannot be empty")
 
@@ -138,7 +149,142 @@ def validate_candle_series(candles: list[MarketCandle | dict[str, Any]]) -> bool
                 raise ValueError("timestamps must be strictly daily and contiguous")
         previous_ts = ts
 
+    if as_of is not None:
+        cutoff = _parse_timestamp(as_of)
+        for candle in normalised:
+            if candle.timestamp + timedelta(days=1) > cutoff:
+                raise ValueError(
+                    f"incomplete daily candle at {candle.timestamp.isoformat()}"
+                )
+        if require_fresh:
+            latest_expected = cutoff.replace(
+                hour=0, minute=0, second=0, microsecond=0
+            ) - timedelta(days=1)
+            if normalised[-1].timestamp != latest_expected:
+                raise ValueError(
+                    "stale candle history: latest completed UTC candle is "
+                    f"{latest_expected.isoformat()}"
+                )
+
     if len(normalised) < 2:
         raise ValueError("at least two completed candles are required for validation")
 
     return True
+
+
+def write_candles_parquet(
+    candles: list[MarketCandle | dict[str, Any]],
+    output_path: str | Path,
+    source: str,
+    requested_start: str,
+    requested_end: str,
+) -> Path:
+    normalized = [validate_candle(candle) for candle in candles]
+    validate_candle_series(normalized)
+    rows = [
+        {
+            "timestamp_ms": candle_to_epoch_ms(candle),
+            "symbol": candle.symbol,
+            "interval": candle.interval,
+            "open": candle.open,
+            "high": candle.high,
+            "low": candle.low,
+            "close": candle.close,
+            "volume": candle.volume,
+            "source": candle.source,
+        }
+        for candle in normalized
+    ]
+    normalized_hash = _normalized_hash(rows)
+    manifest = {
+        "source": source,
+        "symbol": "BTC/EUR",
+        "interval": "1d",
+        "timestamp_semantics": "UTC interval start in epoch milliseconds",
+        "requested_start": requested_start,
+        "requested_end": requested_end,
+        "retrieved_at": datetime.now(UTC).isoformat(),
+        "ccxt_version": ccxt.__version__,
+        "validation_schema_version": 1,
+        "validation": "passed",
+        "candle_count": len(rows),
+        "normalized_sha256": normalized_hash,
+    }
+    manifest_bytes = json.dumps(manifest, sort_keys=True).encode()
+    table = pa.Table.from_pylist(rows).replace_schema_metadata(
+        {b"trot.manifest": manifest_bytes}
+    )
+
+    path = Path(output_path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    pq.write_table(table, path)
+    manifest_path = path.with_suffix(path.suffix + ".manifest.json")
+    manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n")
+    return path
+
+
+def _normalized_hash(rows: list[dict[str, Any]]) -> str:
+    canonical_rows = [
+        {
+            key: format(value.normalize(), "f") if isinstance(value, Decimal) else value
+            for key, value in row.items()
+        }
+        for row in rows
+    ]
+    content = json.dumps(
+        canonical_rows, sort_keys=True, default=str, separators=(",", ":")
+    ).encode()
+    return hashlib.sha256(content).hexdigest()
+
+
+def read_candles_parquet(
+    input_path: str | Path,
+) -> tuple[list[MarketCandle], dict[str, Any]]:
+    path = Path(input_path)
+    table = pq.read_table(path)
+    metadata = table.schema.metadata or {}
+    raw_manifest = metadata.get(b"trot.manifest")
+    sidecar_path = path.with_suffix(path.suffix + ".manifest.json")
+    if raw_manifest is None or not sidecar_path.is_file():
+        raise ValueError("Parquet dataset is missing provenance metadata")
+    manifest = json.loads(raw_manifest)
+    sidecar = json.loads(sidecar_path.read_text())
+    if manifest != sidecar:
+        raise ValueError("Parquet provenance metadata does not match its manifest")
+
+    candles = [
+        validate_candle(
+            {
+                "symbol": row["symbol"],
+                "interval": row["interval"],
+                "timestamp": row["timestamp_ms"],
+                "open": row["open"],
+                "high": row["high"],
+                "low": row["low"],
+                "close": row["close"],
+                "volume": row["volume"],
+                "source": row["source"],
+            }
+        )
+        for row in table.to_pylist()
+    ]
+    validate_candle_series(candles)
+    if len(candles) != manifest.get("candle_count"):
+        raise ValueError("Parquet candle count does not match provenance manifest")
+    rows = [
+        {
+            "timestamp_ms": candle_to_epoch_ms(candle),
+            "symbol": candle.symbol,
+            "interval": candle.interval,
+            "open": candle.open,
+            "high": candle.high,
+            "low": candle.low,
+            "close": candle.close,
+            "volume": candle.volume,
+            "source": candle.source,
+        }
+        for candle in candles
+    ]
+    if _normalized_hash(rows) != manifest.get("normalized_sha256"):
+        raise ValueError("Parquet candle content does not match provenance hash")
+    return candles, manifest

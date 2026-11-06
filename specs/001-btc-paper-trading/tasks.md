@@ -244,3 +244,14 @@ Task: T030 read-only quote handling in src/trot/exchange.py
   label.
 - No live execution, multiple pairs, parameter optimization, web service, or external database
   belongs in this task set.
+
+## Phase 7: Convergence
+
+- [X] T036 CRITICAL: Reject incomplete and stale candles before they enter strategy input, with deterministic boundary tests in `tests/test_data.py` per Constitution I (partial).
+- [X] T037 Implement validated Parquet read/write and provenance metadata in `src/trot/data.py`, including explicit range and validation results per FR-003 (missing).
+- [X] T038 Repair package imports and wire `trot data download` arguments in `src/trot/main.py` to `src/trot/config.py`, `src/trot/exchange.py`, and `src/trot/data.py`; test success and visible failure paths in `tests/test_cli.py` per FR-003/FR-004 (missing).
+- [X] T039 Complete the shared decision and order-intent path so indicators, volatility sizing, allocation caps, rebalance/required-exit rules, fees, cash, and minimum-order residuals are enforced and auditable; add deterministic boundary tests per FR-006–FR-014 (partial).
+- [X] T040 Implement and test chronological backtesting, next-candle execution, benchmarks, required metrics, validation failures, walk-forward folds, and cost stress reports per FR-015–FR-019 (missing).
+- [X] T041 Implement and test SQLite paper persistence, idempotent recovery, quote validation, paper cycle/status workflows, and simulated-only reporting per FR-020–FR-024 (missing).
+- [X] T042 Set the configured default exchange to Kraken and verify it matches the documented plan and CLI contract per plan: initial exchange default (partial).
+- [X] T043 Document the implemented setup, download, backtest, and paper workflows and their simulated-only limitation in `README.md` per T033 (missing).

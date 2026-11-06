@@ -17,6 +17,8 @@ def test_default_configuration_values() -> None:
     assert settings.volatility_target == 0.12
     assert settings.rebalance_threshold == 0.05
     assert settings.min_trade_eur == 25.0
+    assert settings.exchange_source == "kraken"
+    assert settings.paper_quote_max_age_seconds == 60
 
 
 def test_invalid_symbol_and_ranges_are_rejected() -> None:

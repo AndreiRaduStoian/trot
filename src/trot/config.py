@@ -38,8 +38,8 @@ class Settings(BaseSettings):
     data_dir: str = "data/market"
     db_path: str = "data/bot.db"
     mode: Literal["backtest", "paper"] = "paper"
-    exchange_source: Literal["binance", "coinbase", "kraken"] = "binance"
-    paper_quote_max_age_hours: int = Field(default=12, gt=0)
+    exchange_source: Literal["binance", "coinbase", "kraken"] = "kraken"
+    paper_quote_max_age_seconds: int = Field(default=60, gt=0)
     log_level: str = "INFO"
 
     @field_validator("symbol", "timeframe", "interval")

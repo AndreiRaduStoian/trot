@@ -47,6 +47,7 @@ class PortfolioState:
 class Decision:
     candle_timestamp: datetime | None = None
     symbol: str | None = None
+    source: str | None = None
     signal: Signal = "unavailable"
     action: DecisionAction = "abstain"
     reason: str = ""
