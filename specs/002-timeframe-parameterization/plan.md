@@ -6,7 +6,7 @@
 
 ## Summary
 
-Parameterize the BTC/EUR market interval and execution cadence so the trading app supports the existing daily default and an explicit hourly mode without hard-coded 1d assumptions. The design keeps the deterministic backtest workflow, validates interval-aware data integrity, and enforces next-bar-open execution semantics for both supported intervals.
+Parameterize the BTC/EUR market interval and execution cadence so the trading app supports the existing daily default and an explicit hourly mode across historical downloads, validation, and backtesting. The design keeps deterministic research, validates interval-aware data integrity and completed-bar boundaries, and enforces next-bar-open execution semantics for both supported intervals.
 
 ## Technical Context
 
@@ -24,7 +24,7 @@ Parameterize the BTC/EUR market interval and execution cadence so the trading ap
 
 **Performance Goals**: Support small research datasets and user-invoked backtests without introducing throughput or memory problems
 
-**Constraints**: BTC/EUR only; daily remains default; hourly support is explicit and validated; no live trading or unsupported intervals
+**Constraints**: BTC/EUR only; daily remains default; hourly support is explicit and validated for downloads and research; inclusive UTC calendar-date download bounds; no live trading or unsupported intervals
 
 **Scale/Scope**: One instrument, interval-aware history validation, deterministic historical simulation, no new asset classes or live execution paths
 
@@ -34,13 +34,13 @@ Parameterize the BTC/EUR market interval and execution cadence so the trading ap
 
 | Principle | Status | Notes |
 |---|---|---|
-| I. Data Integrity and Evidence First | PASS | The feature explicitly requires validated interval-aware timestamps, contiguity checks, and completed-bar rules. |
+| I. Data Integrity and Evidence First | PASS | The feature requires validated interval-aware timestamps, contiguity checks, completed-bar filtering on downloads, and clear no-data failures. |
 | II. Risk Controls Are Non-Negotiable | PASS | No live risk expansion or leverage change is introduced; the feature remains BTC/EUR and simulation-only. |
 | III. Test-First and Reproducible Validation | PASS | Deterministic output and validation tests remain required for hourly and daily behavior. |
 | IV. Explainability and Observability | PASS | Interval metadata and run provenance remain part of the output contract. |
 | V. Simplicity and Conservative Defaults | PASS | The feature uses the existing single-module CLI structure and keeps daily as the default. |
 | VI. Execution Integrity and Recovery | PASS | The design preserves next-bar-open execution semantics and rejects invalid range data. |
-| VII. Honest Backtesting and Live Parity | PASS | The run remains research-only and avoids same-close fills/look-ahead bias. |
+| VII. Honest Backtesting and Live Parity | PASS | The run remains research-only, avoids same-close fills/look-ahead bias, and requires chronological hourly walk-forward validation. |
 
 ## Project Structure
 
@@ -64,6 +64,7 @@ src/
 ├── trot/
 │   ├── config.py
 │   ├── data.py
+│   ├── exchange.py
 │   ├── backtest.py
 │   ├── main.py
 │   ├── models.py
@@ -76,7 +77,7 @@ src/
     └── ...
 ```
 
-**Structure Decision**: Keep the current single-package CLI architecture and extend interval validation and run metadata in the existing modules instead of creating a parallel code path. The feature is an internal parameterization change, not a product rewrite.
+**Structure Decision**: Keep the current single-package CLI architecture and extend interval validation, exchange pagination, download range/completion filtering, and run metadata in the existing modules instead of creating a parallel code path. The feature is an internal parameterization change, not a product rewrite.
 
 ## Complexity Tracking
 

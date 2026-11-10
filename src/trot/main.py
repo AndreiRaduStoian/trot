@@ -12,6 +12,8 @@ from pathlib import Path
 
 from .config import Settings
 from .data import (
+    interval_delta,
+    normalize_interval,
     read_candles_parquet,
     validate_candle,
     validate_candle_series,
@@ -49,6 +51,7 @@ def _build_parser() -> argparse.ArgumentParser:
     download_parser = subparsers.add_parser("download", help="Download market data")
     download_parser.add_argument("--start", dest="start", required=True)
     download_parser.add_argument("--end", dest="end", required=True)
+    download_parser.add_argument("--interval", default="1d")
     download_parser.add_argument("--output")
     download_parser.add_argument("--exchange")
 
@@ -58,6 +61,7 @@ def _build_parser() -> argparse.ArgumentParser:
     backtest_parser.add_argument("--data", required=True)
     backtest_parser.add_argument("--start")
     backtest_parser.add_argument("--end")
+    backtest_parser.add_argument("--interval", default="1d")
     backtest_parser.add_argument("--fold", action="append", default=[])
     paper_parser = subparsers.add_parser("paper", help="Run paper operations")
     paper_subparsers = paper_parser.add_subparsers(dest="paper_command")
@@ -81,6 +85,7 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     data_download_parser.add_argument("--since")
     data_download_parser.add_argument("--until")
+    data_download_parser.add_argument("--interval", default="1d")
     data_download_parser.add_argument("--output")
     data_download_parser.add_argument("--exchange")
 
@@ -109,6 +114,7 @@ def main(argv: list[str] | None = None) -> int:
             args.end,
             args.output,
             args.exchange,
+            args.interval,
         )
 
     if args.command == "data":
@@ -124,10 +130,18 @@ def main(argv: list[str] | None = None) -> int:
             args.until,
             args.output,
             args.exchange,
+            args.interval,
         )
 
     if args.command == "backtest":
-        return _run_backtest(settings, args.data, args.start, args.end, args.fold)
+        return _run_backtest(
+            settings,
+            args.data,
+            args.start,
+            args.end,
+            args.fold,
+            args.interval,
+        )
 
     if args.command == "paper":
         if args.paper_command == "cycle":
@@ -151,8 +165,12 @@ def _download_history(
     until_text: str,
     output_text: str | None,
     source: str | None,
+    interval_override: str | None = None,
 ) -> int:
     try:
+        interval = normalize_interval(interval_override or settings.timeframe)
+        settings = Settings(timeframe=interval, interval=interval)
+
         since = date.fromisoformat(since_text)
         until = date.fromisoformat(until_text)
         if until < since:
@@ -173,20 +191,21 @@ def _download_history(
 
         raw_candles = fetch_ohlcv(
             symbol=settings.symbol,
-            timeframe=settings.timeframe,
+            timeframe=interval,
             start_ms=start_ms,
             end_ms=end_ms,
             source=exchange_source,
         )
         now = datetime.now(UTC)
         candles = []
+        interval_step = interval_delta(interval)
         for row in raw_candles:
             if len(row) < 6:
                 raise ValueError("exchange returned a malformed OHLCV row")
             candle = validate_candle(
                 {
                     "symbol": settings.symbol,
-                    "interval": settings.timeframe,
+                    "interval": interval,
                     "timestamp": row[0],
                     "open": row[1],
                     "high": row[2],
@@ -196,12 +215,15 @@ def _download_history(
                     "source": exchange_source,
                 }
             )
-            if (
-                start <= candle.timestamp < end_exclusive
-                and candle.timestamp + timedelta(days=1) <= now
-            ):
+            if start <= candle.timestamp < end_exclusive and candle.timestamp + interval_step <= now:
                 candles.append(candle)
 
+        if not candles:
+            raise ValueError(
+                f"no completed {interval} candles found for requested range "
+                f"{since.isoformat()} through {until.isoformat()}; the exchange "
+                "may not provide history for this range"
+            )
         validate_candle_series(candles)
         write_candles_parquet(
             candles,
@@ -213,7 +235,7 @@ def _download_history(
         first_date = candles[0].timestamp.date().isoformat()
         last_date = candles[-1].timestamp.date().isoformat()
         print(
-            f"Downloaded {len(candles)} candles (BTC/EUR 1d) from {exchange_source}; "
+            f"Downloaded {len(candles)} candles (BTC/EUR {interval}) from {exchange_source}; "
             f"available range {first_date} to {last_date}; validation passed; "
             f"output: {output_path}"
         )
@@ -243,11 +265,20 @@ def _run_backtest(
     start_text: str | None,
     end_text: str | None,
     fold_texts: list[str],
+    interval_override: str | None = None,
 ) -> int:
     try:
         from .backtest import run_backtest
+        from .data import normalize_interval
+
+        interval = normalize_interval(interval_override or settings.timeframe)
+        settings = Settings(timeframe=interval, interval=interval)
 
         candles, manifest = read_candles_parquet(data_path)
+        if candles and candles[0].interval != interval:
+            raise ValueError(
+                f"dataset interval {candles[0].interval} does not match selected interval {interval}"
+            )
         if start_text:
             start_date = date.fromisoformat(start_text)
             candles = [
@@ -280,23 +311,13 @@ def _run_backtest(
             folds=folds,
         )
         result["source"] = manifest["source"]
+        result["interval"] = interval
         result["range"] = [
             candles[0].timestamp.isoformat(),
             candles[-1].timestamp.isoformat(),
         ]
-
-        fills = result.pop("fills", [])
-        for f in fills:
-            print(f)
-        print(result["ending_cash_eur"], result["ending_btc"], result["ending_equity_eur"])
-        # print(decisions[-1])
-        # for d in decisions:
-        #     if d['action'] in ['sell', 'buy']:
-        #         print(d['action'], d[''])
-
-
         #print(json.dumps(result, sort_keys=True, default=str))
-
+        print(result["ending_cash_eur"], result["ending_btc"], result["ending_equity_eur"])
         return 0
     except Exception as exc:  # noqa: BLE001
         print(f"backtest failed: {exc}", file=sys.stderr)
@@ -365,8 +386,9 @@ def _paper_history(
                 }
             )
         )
+    interval_step = timedelta(days=1) if settings.timeframe == "1d" else timedelta(hours=1)
     candles = [
-        candle for candle in candles if candle.timestamp + timedelta(days=1) <= now
+        candle for candle in candles if candle.timestamp + interval_step <= now
     ]
     validate_candle_series(candles, as_of=now, require_fresh=True)
     write_candles_parquet(
@@ -401,7 +423,7 @@ def _run_paper_cycle(settings: Settings, data_path: str | None, account_id: str)
                 candles[: index + 1],
                 PortfolioState(cash_eur=cash, btc_balance=btc, total_equity_eur=equity),
                 config,
-                as_of=candle.timestamp + timedelta(days=1),
+                as_of=candle.timestamp + (timedelta(days=1) if settings.timeframe == "1d" else timedelta(hours=1)),
             )
             order_record = None
             fill_record = None
@@ -412,7 +434,7 @@ def _run_paper_cycle(settings: Settings, data_path: str | None, account_id: str)
                 "buy",
                 "sell",
             }:
-                execution_timestamp = candle.timestamp + timedelta(days=1)
+                execution_timestamp = candle.timestamp + (timedelta(days=1) if settings.timeframe == "1d" else timedelta(hours=1))
                 reference_price = None
                 if index + 1 < len(candles):
                     reference_price = candles[index + 1].open

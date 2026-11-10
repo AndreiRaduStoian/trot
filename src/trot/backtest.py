@@ -7,7 +7,7 @@ from datetime import date, timedelta
 from decimal import Decimal
 from typing import Any
 
-from .data import candle_to_epoch_ms, validate_candle_series
+from .data import candle_to_epoch_ms, interval_delta, validate_candle_series
 from .execution import build_order_intent
 from .models import MarketCandle, PortfolioState, StrategyConfig
 from .strategy import evaluate_portfolio
@@ -88,7 +88,7 @@ def _simulate(
             continue
 
         next_candle = candles[index + 1]
-        decision_time = candle.timestamp + timedelta(days=1)
+        decision_time = candle.timestamp + interval_delta(candle.interval)
         decision = evaluate_portfolio(
             candles[: index + 1],
             PortfolioState(cash_eur=cash, btc_balance=btc, total_equity_eur=equity),
@@ -283,6 +283,7 @@ def run_backtest(
     ).hexdigest()
     result = {
         **base,
+        "interval": candles[0].interval if candles else "1d",
         "label": "simulated research",
         "dataset_hash": dataset_hash,
         "config_hash": config_hash,

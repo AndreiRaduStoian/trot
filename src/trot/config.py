@@ -19,9 +19,9 @@ class Settings(BaseSettings):
     )
 
     symbol: Literal["BTC/EUR"] = "BTC/EUR"
-    timeframe: Literal["1d"] = "1d"
-    interval: Literal["1d"] = "1d"
-    initial_cash_eur: float = Field(default=500.0, gt=0)
+    timeframe: Literal["1d", "1h"] = "1d"
+    interval: Literal["1d", "1h"] = "1d"
+    initial_cash_eur: float = Field(default=1000.0, gt=0)
     max_btc_allocation: float = Field(default=0.5, gt=0, le=0.5)
     sma_days: int = Field(default=30, ge=1)
     momentum_days: int = Field(default=14, ge=1)
@@ -38,7 +38,7 @@ class Settings(BaseSettings):
     data_dir: str = "data/market"
     db_path: str = "data/bot.db"
     mode: Literal["backtest", "paper"] = "paper"
-    exchange_source: Literal["binance", "coinbase", "kraken"] = "kraken"
+    exchange_source: Literal["binance", "coinbase", "kraken"] = "binance"
     paper_quote_max_age_seconds: int = Field(default=60, gt=0)
     log_level: str = "INFO"
 
@@ -48,10 +48,10 @@ class Settings(BaseSettings):
         normalized = value.strip().upper()
         if normalized == "BTC/EUR":
             return "BTC/EUR"
-        if normalized == "1D":
-            return "1d"
+        if normalized in {"1D", "1H"}:
+            return normalized.lower()
         raise ValueError(
-            "Only BTC/EUR and daily 1d candles are supported in this release."
+            "Only BTC/EUR, 1d candles, and 1h candles are supported in this release."
         )
 
     @field_validator("data_dir", "db_path")

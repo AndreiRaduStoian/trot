@@ -38,6 +38,7 @@ An operator wants to evaluate the strategy on hourly candles and execute trades 
 1. **Given** a valid hourly BTC/EUR dataset, **When** the operator selects the hourly interval, **Then** the system accepts the dataset and evaluates strategy decisions using completed bars only.
 2. **Given** a signal generated on a completed bar, **When** the next valid hourly bar open is available, **Then** the system executes against that next bar open rather than the signal bar itself.
 3. **Given** a selected interval that is not supported, **When** the operator runs the analysis, **Then** the system rejects the request with a clear validation error.
+4. **Given** a requested historical UTC date range, **When** the operator downloads data with `--interval 1h`, **Then** the system fetches, validates, and stores hourly candles with `1h` provenance metadata.
 
 ---
 
@@ -58,11 +59,13 @@ An operator wants the system to reject invalid history clearly and early so the 
 
 ### Edge Cases
 
-- What happens when the chosen interval is unsupported or misspelled?
-- How does the system handle a dataset with a valid daily default but a conflicting hourly override?
-- What happens when a signal is created but no next valid bar exists for execution?
-- How does the system handle repeated runs using the same fixed dataset and configuration?
-- What happens when a dataset is contiguous within one interval but contains an impossible requested range?
+- Unsupported or misspelled intervals are rejected before fetching or simulation.
+- A dataset whose interval conflicts with the selected interval is rejected.
+- A signal without a next valid bar produces no fill.
+- Repeated runs with the same fixed dataset and configuration produce identical results.
+- Download date bounds are inclusive UTC calendar dates; the request window ends at 00:00 UTC on the day after `until`.
+- A candle is complete only when its UTC interval-start timestamp plus the interval duration is no later than the current UTC time.
+- If a download yields no completed candles in the requested window, the command fails with a clear no-data message and does not write a dataset.
 
 ## Requirements *(mandatory)*
 
@@ -78,6 +81,7 @@ An operator wants the system to reject invalid history clearly and early so the 
 - **FR-008**: The system MUST include interval information in run metadata and result output so operators can distinguish daily and hourly analysis runs.
 - **FR-009**: The system MUST produce deterministic results for the same dataset, interval, and configuration when executed repeatedly.
 - **FR-010**: The system MUST present clear, actionable failures when validation or range selection prevents execution.
+- **FR-011**: The system MUST apply the selected interval to historical data downloads, including exchange requests, UTC date-window filtering, completed-candle filtering, validation, and Parquet provenance metadata; when no completed candles are available in the requested window, it MUST fail clearly without writing a dataset.
 
 ### Key Entities *(include if feature involves data)*
 
@@ -95,6 +99,7 @@ An operator wants the system to reject invalid history clearly and early so the 
 - **SC-003**: Invalid intervals, missing bars, duplicate timestamps, or impossible requested ranges are rejected before simulation output is reported.
 - **SC-004**: A decision generated from a completed bar executes only on the next valid bar open, preventing same-close fills and future-looking behavior.
 - **SC-005**: Results clearly identify the active interval and remain understandable to operators evaluating daily versus hourly performance.
+- **SC-006**: Hourly research supports chronological walk-forward folds and reports metrics only for each fold's requested test window.
 
 ## Assumptions
 

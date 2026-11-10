@@ -28,8 +28,8 @@ def fetch_ohlcv(
 ) -> list[list[Any]]:
     if symbol != "BTC/EUR":
         raise ValueError("Only BTC/EUR is supported in this feature")
-    if timeframe != "1d":
-        raise ValueError("Only 1d candles are supported in this feature")
+    if timeframe not in {"1d", "1h"}:
+        raise ValueError("Unsupported interval. Supported intervals are: 1d, 1h")
 
     exchange = _make_exchange(source)
     has_fetch_ohlcv = False
@@ -42,7 +42,9 @@ def fetch_ohlcv(
     if not has_fetch_ohlcv:
         raise ValueError(f"Exchange {source} does not support OHLCV fetching")
 
-    candles: list[list[Any]] = []
+    candles_by_timestamp: dict[int, list[Any]] = {}
+    step_ms = 86_400_000 if timeframe == "1d" else 3_600_000
+
     since = start_ms
     while True:
         batch = exchange.fetch_ohlcv(
@@ -51,22 +53,29 @@ def fetch_ohlcv(
         if not batch:
             break
 
+        timestamps: list[int] = []
         for bar in batch:
             ts = int(bar[0])
+            timestamps.append(ts)
             if end_ms is not None and ts > end_ms:
                 continue
-            candles.append(bar)
+            if start_ms is not None and ts < start_ms:
+                continue
+            candles_by_timestamp[ts] = bar
 
-        last_ts = int(batch[-1][0])
-        if end_ms is not None and last_ts >= end_ms:
-            break
-        since = last_ts + 86_400_000
-        if since is None or since <= 0:
-            break
-        if len(batch) < limit:
+        if not timestamps:
             break
 
-    return candles
+        newest_ts = max(timestamps)
+        if end_ms is not None and newest_ts + step_ms > end_ms:
+            break
+
+        next_since = newest_ts + step_ms
+        if since is not None and next_since <= since:
+            break
+        since = next_since
+
+    return [candles_by_timestamp[timestamp] for timestamp in sorted(candles_by_timestamp)]
 
 
 def validate_public_quote(

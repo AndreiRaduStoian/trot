@@ -14,6 +14,28 @@ import pyarrow.parquet as pq
 
 from .models import MarketCandle
 
+SUPPORTED_INTERVALS = {"1d": timedelta(days=1), "1h": timedelta(hours=1)}
+
+
+def normalize_interval(value: str | None) -> str:
+    candidate = (value or "1d").strip().lower()
+    if candidate not in SUPPORTED_INTERVALS:
+        raise ValueError(
+            f"Unsupported interval: {value!r}. Supported intervals are: 1d, 1h"
+        )
+    return candidate
+
+
+def interval_delta(value: str | None) -> timedelta:
+    return SUPPORTED_INTERVALS[normalize_interval(value)]
+
+
+def interval_floor(timestamp: datetime, interval: str | None) -> datetime:
+    normalized = normalize_interval(interval)
+    if normalized == "1d":
+        return timestamp.replace(hour=0, minute=0, second=0, microsecond=0)
+    return timestamp.replace(minute=0, second=0, microsecond=0)
+
 
 def _parse_timestamp(value: Any) -> datetime:
     if isinstance(value, datetime):
@@ -72,8 +94,7 @@ def validate_candle(value: dict[str, Any] | MarketCandle) -> MarketCandle:
 
     if candle.symbol != "BTC/EUR":
         raise ValueError("symbol must be BTC/EUR")
-    if candle.interval != "1d":
-        raise ValueError("interval must be 1d")
+    interval = normalize_interval(candle.interval)
     if candle.source is None or not str(candle.source).strip():
         raise ValueError("source is required")
     if candle.timestamp is None:
@@ -97,12 +118,12 @@ def validate_candle(value: dict[str, Any] | MarketCandle) -> MarketCandle:
         raise ValueError("high must be at least max(open, close, low)")
     if low_price > min(open_price, close_price, high_price):
         raise ValueError("low must be at most min(open, close, high)")
-    if ts.hour != 0 or ts.minute != 0 or ts.second != 0 or ts.microsecond != 0:
-        raise ValueError("timestamp must be UTC interval-start at midnight")
+    if ts != interval_floor(ts, interval):
+        raise ValueError(f"timestamp must be UTC interval-start at the {interval} boundary")
 
     return MarketCandle(
         symbol="BTC/EUR",
-        interval="1d",
+        interval=interval,
         timestamp=ts,
         open=open_price,
         high=high_price,
@@ -132,12 +153,17 @@ def validate_candle_series(
     normalised: list[MarketCandle] = []
     seen: set[int] = set()
     previous_ts: datetime | None = None
+    interval: str | None = None
 
     for candle in candles:
         validated = validate_candle(candle)
         ts = validated.timestamp
         if ts is None:
             raise ValueError("candle timestamp is required")
+        if interval is None:
+            interval = validated.interval
+        elif validated.interval != interval:
+            raise ValueError("dataset contains mixed intervals; all candles must match")
         ts_ms = int(ts.timestamp() * 1000)
         if ts_ms in seen:
             raise ValueError("duplicate timestamp detected")
@@ -145,21 +171,25 @@ def validate_candle_series(
         normalised.append(validated)
         if previous_ts is not None:
             delta = ts - previous_ts
-            if delta != timedelta(days=1):
-                raise ValueError("timestamps must be strictly daily and contiguous")
+            allowed_deltas = {interval_delta(interval)}
+            if interval == "1h":
+                allowed_deltas.add(timedelta(days=1))
+            if delta not in allowed_deltas:
+                raise ValueError(
+                    f"timestamps must be strictly {interval} and contiguous"
+                )
         previous_ts = ts
 
     if as_of is not None:
         cutoff = _parse_timestamp(as_of)
+        interval_step = interval_delta(interval)
         for candle in normalised:
-            if candle.timestamp + timedelta(days=1) > cutoff:
+            if candle.timestamp + interval_step > cutoff:
                 raise ValueError(
-                    f"incomplete daily candle at {candle.timestamp.isoformat()}"
+                    f"incomplete {interval} candle at {candle.timestamp.isoformat()}"
                 )
         if require_fresh:
-            latest_expected = cutoff.replace(
-                hour=0, minute=0, second=0, microsecond=0
-            ) - timedelta(days=1)
+            latest_expected = interval_floor(cutoff, interval) - interval_step
             if normalised[-1].timestamp != latest_expected:
                 raise ValueError(
                     "stale candle history: latest completed UTC candle is "
@@ -181,6 +211,7 @@ def write_candles_parquet(
 ) -> Path:
     normalized = [validate_candle(candle) for candle in candles]
     validate_candle_series(normalized)
+    interval = normalized[0].interval
     rows = [
         {
             "timestamp_ms": candle_to_epoch_ms(candle),
@@ -199,7 +230,7 @@ def write_candles_parquet(
     manifest = {
         "source": source,
         "symbol": "BTC/EUR",
-        "interval": "1d",
+        "interval": interval,
         "timestamp_semantics": "UTC interval start in epoch milliseconds",
         "requested_start": requested_start,
         "requested_end": requested_end,

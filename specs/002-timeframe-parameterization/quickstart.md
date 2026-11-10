@@ -34,7 +34,21 @@ Expected outcome:
 - Signals are generated only from completed bars.
 - Execution occurs on the next valid hourly bar open after the signal bar.
 
-### 3. Invalid interval handling
+### 3. Download hourly history
+
+Download hourly candles for an inclusive UTC date range:
+
+```bash
+uv run trot data download --since 2025-01-01 --until 2026-10-10 --interval 1h --output data/market/btc-eur-1h.parquet
+```
+
+Expected outcome:
+- The exchange request uses `1h` and is paginated until the requested historical window is covered or the source reports no more data.
+- Only candles inside the requested UTC date window whose hourly interval has completed are saved.
+- The Parquet manifest records `interval: 1h` and the requested dates.
+- If the requested window contains no completed candles, the command fails with a clear message and writes no dataset.
+
+### 4. Invalid interval handling
 
 ```bash
 python -m trot.main backtest --data path/to/history.parquet --interval 15m
@@ -44,7 +58,7 @@ Expected outcome:
 - The command fails visibly.
 - The user sees a clear validation error for the unsupported interval.
 
-### 4. Gapped or invalid data
+### 5. Gapped or invalid data
 
 Use a series with missing bars, duplicate timestamps, or stale incomplete bars.
 
