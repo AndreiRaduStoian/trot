@@ -284,7 +284,19 @@ def _run_backtest(
             candles[0].timestamp.isoformat(),
             candles[-1].timestamp.isoformat(),
         ]
-        print(json.dumps(result, sort_keys=True, default=str))
+
+        fills = result.pop("fills", [])
+        for f in fills:
+            print(f)
+        print(result["ending_cash_eur"], result["ending_btc"], result["ending_equity_eur"])
+        # print(decisions[-1])
+        # for d in decisions:
+        #     if d['action'] in ['sell', 'buy']:
+        #         print(d['action'], d[''])
+
+
+        #print(json.dumps(result, sort_keys=True, default=str))
+
         return 0
     except Exception as exc:  # noqa: BLE001
         print(f"backtest failed: {exc}", file=sys.stderr)
